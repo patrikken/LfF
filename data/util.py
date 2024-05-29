@@ -40,12 +40,12 @@ class ZippedDataset(Dataset):
 
         return item
 
-    
+
 transforms = {
     "ColoredMNIST": {
         "train": T.Compose([T.ToTensor()]),
-        "eval": T.Compose([T.ToTensor()])
-        },
+        "eval": T.Compose([T.ToTensor()]),
+    },
     "CorruptedCIFAR10": {
         "train_aug": T.Compose(
             [
@@ -73,18 +73,22 @@ transforms = {
         ),
     },
     "Shapes3D": {
-        "train": T.Compose([
-            T.ToTensor(),
-            T.ToPILImage(),
-            T.Resize((32, 32)),
-            T.ToTensor(),
-        ]),
-        "eval": T.Compose([
-            T.ToTensor(),
-            T.ToPILImage(),
-            T.Resize((32, 32)),
-            T.ToTensor(),
-        ]),
+        "train": T.Compose(
+            [
+                T.ToTensor(),
+                T.ToPILImage(),
+                T.Resize((32, 32)),
+                T.ToTensor(),
+            ]
+        ),
+        "eval": T.Compose(
+            [
+                T.ToTensor(),
+                T.ToPILImage(),
+                T.Resize((32, 32)),
+                T.ToTensor(),
+            ]
+        ),
     },
     "CelebA": {
         "train": T.Compose(
@@ -92,7 +96,7 @@ transforms = {
                 T.Resize((224, 224)),
                 T.RandomHorizontalFlip(),
                 T.ToTensor(),
-                T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]), 
+                T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         ),
         "eval": T.Compose(
@@ -112,16 +116,15 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
     transform = transforms[dataset_category][transform_split]
     dataset_split = "valid" if (dataset_split == "eval") else dataset_split
     if dataset_tag == "CelebA":
-        celeba_root = '/home/xxxx/datasets/CelebA'
+        celeba_root = "./data/celeba"
         dataset = CelebA(
             root=celeba_root,
             split=dataset_split,
             target_type="attr",
             transform=transform,
+            download=True,
         )
     else:
-        dataset = AttributeDataset(
-            root=root, split=dataset_split, transform=transform
-        )
+        dataset = AttributeDataset(root=root, split=dataset_split, transform=transform)
 
     return dataset

@@ -7,28 +7,25 @@ import torch
 from torchvision.datasets import CIFAR10, MNIST
 import torchvision.transforms as T
 
-from config import ex
+# from config import ex
 
 from data.corrupted_cifar10_protocol import CORRUPTED_CIFAR10_PROTOCOL
 from data.colored_mnist_protocol import COLORED_MNIST_PROTOCOL
 
 import cv2
 
+
 def make_attr_labels(target_labels, bias_aligned_ratio):
     num_classes = target_labels.max().item() + 1
     num_samples_per_class = np.array(
-        [
-            torch.sum(target_labels == label).item()
-            for label in range(num_classes)
-        ]
+        [torch.sum(target_labels == label).item() for label in range(num_classes)]
     )
     ratios_per_class = bias_aligned_ratio * np.eye(num_classes) + (
         1 - bias_aligned_ratio
     ) / (num_classes - 1) * (1 - np.eye(num_classes))
 
     corruption_milestones_per_class = (
-        num_samples_per_class[:, np.newaxis]
-        * np.cumsum(ratios_per_class, axis=1)
+        num_samples_per_class[:, np.newaxis] * np.cumsum(ratios_per_class, axis=1)
     ).round()
     num_corruptions_per_class = np.concatenate(
         [
@@ -50,13 +47,14 @@ def make_attr_labels(target_labels, bias_aligned_ratio):
     return attr_labels
 
 
-@ex.capture
+# @ex.capture
 def make_corrupted_cifar10(
     data_dir, skewed_ratio, corruption_names, severity, postfix="0"
-    ):
+):
     cifar10_dir = os.path.join(data_dir, "CIFAR10")
     corrupted_cifar10_dir = os.path.join(
-        data_dir, f"CorruptedCIFAR10-Type{postfix}-Skewed{skewed_ratio}-Severity{severity}"
+        data_dir,
+        f"CorruptedCIFAR10-Type{postfix}-Skewed{skewed_ratio}-Severity{severity}",
     )
     os.makedirs(corrupted_cifar10_dir, exist_ok=True)
     print(corrupted_cifar10_dir)
@@ -73,7 +71,7 @@ def make_corrupted_cifar10(
         os.makedirs(os.path.join(corrupted_cifar10_dir, split), exist_ok=True)
 
         if split == "train":
-            bias_aligned_ratio = 1-skewed_ratio
+            bias_aligned_ratio = 1 - skewed_ratio
         else:
             bias_aligned_ratio = 0.1
 
@@ -86,20 +84,20 @@ def make_corrupted_cifar10(
             zip(dataset.data, dataset.targets, corruption_labels),
             total=len(corruption_labels),
         ):
-            
+
             method_name = corruption_names[corruption_label]
-            corrupted_img = protocol[method_name](convert_img(img), severity+1)
+            corrupted_img = protocol[method_name](convert_img(img), severity + 1)
             images.append(np.array(corrupted_img).astype(np.uint8))
             attrs.append([target_label, corruption_label])
-                    
+
         image_path = os.path.join(corrupted_cifar10_dir, split, "images.npy")
         np.save(image_path, np.array(images).astype(np.uint8))
         attr_path = os.path.join(corrupted_cifar10_dir, split, "attrs.npy")
         np.save(attr_path, np.array(attrs).astype(np.uint8))
 
 
-@ex.capture
-def make_colored_mnist(data_dir, skewed_ratio, severity):
+# @ex.capture
+def make_colored_mnist(skewed_ratio, severity, data_dir="attrib_data"):
     mnist_dir = os.path.join(data_dir, "MNIST")
     colored_mnist_dir = os.path.join(
         data_dir, f"ColoredMNIST-Skewed{skewed_ratio}-Severity{severity}"
@@ -117,7 +115,7 @@ def make_colored_mnist(data_dir, skewed_ratio, severity):
         os.makedirs(os.path.join(colored_mnist_dir, split), exist_ok=True)
 
         if split == "train":
-            bias_aligned_ratio = 1. - skewed_ratio
+            bias_aligned_ratio = 1.0 - skewed_ratio
         else:
             bias_aligned_ratio = 0.1
 
@@ -135,17 +133,17 @@ def make_colored_mnist(data_dir, skewed_ratio, severity):
 
             images.append(colored_img)
             attrs.append([target_label, color_label])
-        
+
         colors_path = os.path.join("./data", "resource", "colors.th")
         mean_color = torch.load(colors_path)
-        
+
         image_path = os.path.join(colored_mnist_dir, split, "images.npy")
         np.save(image_path, np.array(images).astype(np.uint8))
         attr_path = os.path.join(colored_mnist_dir, split, "attrs.npy")
         np.save(attr_path, np.array(attrs).astype(np.uint8))
 
-    
-@ex.automain
+
+# @ex.automain
 def make(make_target):
 
     for skewed_ratio in [5e-2, 2e-2, 1e-2, 5e-3]:
@@ -153,7 +151,7 @@ def make(make_target):
         for severity in [1, 2, 3, 4]:
             if make_target == "colored_mnist":
                 make_colored_mnist(skewed_ratio=skewed_ratio, severity=severity)
-    
+
             if make_target == "cifar10_type0":
                 make_corrupted_cifar10(
                     corruption_names=[
@@ -165,15 +163,15 @@ def make(make_target):
                         "Spatter",
                         "Elastic",
                         "JPEG",
-                        "Pixelate", 
+                        "Pixelate",
                         "Saturate",
                     ],
                     skewed_ratio=skewed_ratio,
                     severity=severity,
                     postfix="0",
                 )
-            
-            if make_target == "cifar10_type1":            
+
+            if make_target == "cifar10_type1":
                 make_corrupted_cifar10(
                     corruption_names=[
                         "Gaussian Noise",
@@ -191,3 +189,6 @@ def make(make_target):
                     severity=severity,
                     postfix="1",
                 )
+
+
+make(make_target="colored_mnist")
